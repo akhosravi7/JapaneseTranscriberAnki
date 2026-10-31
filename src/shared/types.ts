@@ -11,6 +11,20 @@ export interface ImportedAudio {
   importedAt: string
 }
 
+export type RecordingSource = 'microphone' | 'system'
+
+export interface SaveRecordingRequest {
+  data: Uint8Array
+  mimeType: string
+  source: RecordingSource
+}
+
+export interface ScreenAudioStatus {
+  permission: 'granted' | 'denied' | 'restricted' | 'not-determined' | 'unknown'
+  available: boolean
+  error?: string
+}
+
 export interface TranscriptionSegment {
   startSec: number
   endSec: number

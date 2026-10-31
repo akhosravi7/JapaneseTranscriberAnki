@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, desktopCapturer, net, protocol, session, shell } from 'electron'
 import { SessionStore } from './session-store'
 import { SecretsStore } from './secrets'
 import { SettingsStore } from './settings-store'
@@ -20,6 +20,12 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 app.setName('Kotoba Cards')
+
+const rendererUrlArg = process.argv.find((arg) => arg.startsWith('--kotoba-renderer-url='))
+if (rendererUrlArg) {
+  const rendererUrl = rendererUrlArg.slice('--kotoba-renderer-url='.length)
+  if (rendererUrl) process.env.ELECTRON_RENDERER_URL = rendererUrl
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -64,6 +70,42 @@ function createWindow(): void {
   })
 }
 
+function configureMediaPermissions(): void {
+  const ses = session.defaultSession
+
+  ses.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(permission === 'media' || permission === 'display-capture')
+  })
+
+  ses.setPermissionCheckHandler((_webContents, permission) => {
+    return permission === 'media' || permission === 'display-capture'
+  })
+
+  ses.setDisplayMediaRequestHandler(
+    async (request, callback) => {
+      try {
+        if (!request.audioRequested) {
+          callback(null)
+          return
+        }
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: { width: 0, height: 0 }
+        })
+        const screen = sources[0]
+        if (!screen) {
+          callback(null)
+          return
+        }
+        callback({ video: screen, audio: 'loopback' })
+      } catch {
+        callback(null)
+      }
+    },
+    { useSystemPicker: false }
+  )
+}
+
 app.whenReady().then(async () => {
   const userData = app.getPath('userData')
   const sessions = new SessionStore(join(userData, 'sessions'))
@@ -90,6 +132,7 @@ app.whenReady().then(async () => {
   })
 
   registerIpc({ sessions, settings })
+  configureMediaPermissions()
   createWindow()
 
   app.on('activate', () => {

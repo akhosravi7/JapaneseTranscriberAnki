@@ -5,6 +5,7 @@ A local-first macOS desktop app that turns Japanese audio recordings into Anki f
 ## Milestone 1 features
 
 - Import M4A, MP3, WAV, AAC, FLAC, OGG, Opus, or WebM. The original file is copied into the app's session storage and never modified.
+- Record directly in the app from the microphone, or capture system audio while sharing a screen or window.
 - Transcribe through the existing OpenAI-compatible Whisper endpoint (`kotoba-tech/kotoba-whisper-v2.0-faster`).
 - Split the transcript into reviewable sentences using punctuation and pause timing.
 - Edit every sentence. The original transcription is kept separately and can be restored explicitly.
@@ -17,6 +18,8 @@ A local-first macOS desktop app that turns Japanese audio recordings into Anki f
 - Settings are stored locally. API keys are encrypted with Electron `safeStorage`.
 
 ## Requirements
+
+- Microphone recordings require microphone permission. Screen-audio recording requires macOS to see Kotoba Cards as the requesting app: launch the packaged app from Finder (or use `npm run dev:system-audio`) and allow the **System Audio Recording** prompt. Launching from Terminal makes Terminal the responsible app, and macOS refuses the audio prompt.
 
 - macOS (developed and tested on macOS 26.6)
 - Node.js 22+ and npm 11+
@@ -76,7 +79,7 @@ It can be changed in **Settings → Transcription**. Bearer-token authentication
 
 ## Workflow
 
-1. Drop an audio file onto the import screen.
+1. Drop an audio file onto the import screen, or use **Record microphone** / **Capture screen audio**.
 2. The app transcribes it and splits it into sentences.
 3. Select a sentence and click **Proofread** to ask the LLM for kanji/ASR corrections. Review the diff and click **Apply correction**, or ignore it. The original transcript is unchanged either way.
 4. Edit the Japanese manually if needed, then click **Generate**.
@@ -126,6 +129,7 @@ The app keeps one active recording in the UI at a time. Imported audio sessions 
 
 ```bash
 npm run dev          # Run with hot reload
+npm run dev:system-audio  # Run with hot reload and working system-audio capture
 npm run build        # Build main, preload, and renderer
 npm start            # Preview the production build
 npm run typecheck    # TypeScript checks for node and web
@@ -159,3 +163,4 @@ New cards receive the `japanese-audio` tag plus the audio-hash tag. Duplicate wa
 - **Anki cards are not added**: confirm Anki is open, AnkiConnect is installed, and **Settings → AnkiConnect → Test connection** succeeds.
 - **Translation returns HTTP 401**: the translation endpoint needs an API key, or the endpoint/model is incorrect. Use **Test saved translation** after saving.
 - **No audio in a card**: check that the card's note type has an `Audio` field mapped in Settings. The app stores audio as `[sound:<hash>.mp3]`.
+- **System-audio recording returns a silent or ended track**: macOS attributes the `System Audio Recording` prompt to the responsible app. If Kotoba Cards was launched from Terminal or iTerm (`npm run dev`, or running the app binary directly), the terminal is responsible and macOS refuses the prompt because the terminal does not declare `NSAudioCaptureUsageDescription`. Quit the app and reopen `dist/mac-arm64/Kotoba Cards.app` from Finder, or use `npm run dev:system-audio`. The lower **System Audio Recording Only** list is not the blocker, and manually adding the app there is not required.

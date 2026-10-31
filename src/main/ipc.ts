@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { app, clipboard, desktopCapturer, dialog, ipcMain, shell, systemPreferences } from 'electron'
 import { z } from 'zod'
 import { toAppErrorShape } from '@shared/errors'
 import { IPC, type IpcResult } from '@shared/ipc'
@@ -69,6 +69,12 @@ const settingsPatchSchema = z.object({
     .optional()
 })
 
+const saveRecordingSchema = z.object({
+  data: z.custom<Uint8Array>((value) => value instanceof Uint8Array),
+  mimeType: z.string().min(1).max(120),
+  source: z.enum(['microphone', 'system'])
+})
+
 const addCardRequestSchema = z.object({
   sessionId: z.string().min(1).max(200),
   segment: z.object({
@@ -113,6 +119,63 @@ export function registerIpc({ sessions, settings }: Dependencies): void {
   registerHandler(IPC.importAudioPath, async (filePath: string) => {
     const parsed = z.string().min(1).max(4096).parse(filePath)
     return sessions.importFile(parsed)
+  })
+
+  registerHandler(IPC.saveRecording, async (request: unknown) => {
+    const parsed = saveRecordingSchema.parse(request)
+    return sessions.importRecording(parsed.data, parsed.mimeType, parsed.source)
+  })
+
+  registerHandler(IPC.requestMicrophoneAccess, async () => {
+    if (process.platform !== 'darwin') return true
+    return systemPreferences.askForMediaAccess('microphone')
+  })
+
+  registerHandler(IPC.getScreenAudioStatus, async () => {
+    const permission =
+      process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('screen') : 'granted'
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 0, height: 0 }
+      })
+      if (sources.length === 0) {
+        return {
+          permission,
+          available: false,
+          error: 'macOS did not offer a screen to capture system audio from.'
+        }
+      }
+      return { permission, available: true }
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message
+          ? error.message
+          : permission === 'not-determined'
+            ? 'Screen and system audio recording access has not been granted.'
+            : 'macOS refused access to the screen and system audio.'
+      return {
+        permission,
+        available: false,
+        error: `Screen capture is not available: ${reason}.`
+      }
+    }
+  })
+
+  registerHandler(IPC.openScreenAudioSettings, async () => {
+    if (process.platform === 'darwin') {
+      await shell.openExternal(
+        'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+      )
+    }
+  })
+
+  registerHandler(IPC.copyAppBundlePath, async () => {
+    const executable = app.getPath('exe')
+    const bundleIndex = executable.indexOf('.app/')
+    const bundlePath = bundleIndex >= 0 ? executable.slice(0, bundleIndex + 4) : executable
+    clipboard.writeText(bundlePath)
+    return bundlePath
   })
 
   registerHandler(IPC.transcribe, async (sessionId: string) => {

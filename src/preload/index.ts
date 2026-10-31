@@ -11,6 +11,11 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 const api: DesktopApi = {
   importAudio: () => invoke(IPC.importAudio),
   importAudioPath: (filePath) => invoke(IPC.importAudioPath, filePath),
+  saveRecording: (request) => invoke(IPC.saveRecording, request),
+  requestMicrophoneAccess: () => invoke(IPC.requestMicrophoneAccess),
+  getScreenAudioStatus: () => invoke(IPC.getScreenAudioStatus),
+  openScreenAudioSettings: () => invoke(IPC.openScreenAudioSettings),
+  copyAppBundlePath: () => invoke(IPC.copyAppBundlePath),
   pathForFile: (file) => webUtils.getPathForFile(file),
   transcribe: (sessionId) => invoke(IPC.transcribe, sessionId),
   generateReading: (text) => invoke(IPC.generateReading, text),

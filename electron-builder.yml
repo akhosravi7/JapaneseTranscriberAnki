@@ -10,6 +10,13 @@ asarUnpack:
   - node_modules/kuromoji/**
 mac:
   category: public.app-category.education
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   target:
     - dmg
+  extendInfo:
+    NSMicrophoneUsageDescription: Kotoba Cards uses your microphone to record Japanese audio for transcription.
+    NSAudioCaptureUsageDescription: Kotoba Cards records the audio playing on this Mac to create Anki cards.
+    NSScreenCaptureUsageDescription: Kotoba Cards captures screen audio so it can be turned into Anki cards.
 npmRebuild: false

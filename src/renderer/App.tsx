@@ -310,7 +310,12 @@ export default function App(): React.JSX.Element {
 
       <main className="app-main">
         {!audio ? (
-          <ImportScreen onImport={handleImport} error={error} onDismissError={() => setError(null)} />
+          <ImportScreen
+            onImport={handleImport}
+            onRecorded={handleImported}
+            error={error}
+            onDismissError={() => setError(null)}
+          />
         ) : phase === 'transcribing' ? (
           <div className="transcribing-screen">
             <div className="pulse-orb">

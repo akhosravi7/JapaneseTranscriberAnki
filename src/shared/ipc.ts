@@ -10,6 +10,8 @@ import type {
   ProofreadRequest,
   ProofreadResult,
   ReadingResult,
+  SaveRecordingRequest,
+  ScreenAudioStatus,
   SettingsPatch,
   TestTranslationResult,
   TranscriptionResult,
@@ -23,6 +25,11 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: AppErrorS
 export const IPC = {
   importAudio: 'app:importAudio',
   importAudioPath: 'app:importAudioPath',
+  saveRecording: 'app:saveRecording',
+  requestMicrophoneAccess: 'app:requestMicrophoneAccess',
+  getScreenAudioStatus: 'app:getScreenAudioStatus',
+  openScreenAudioSettings: 'app:openScreenAudioSettings',
+  copyAppBundlePath: 'app:copyAppBundlePath',
   transcribe: 'app:transcribe',
   generateReading: 'app:generateReading',
   translate: 'app:translate',
@@ -40,6 +47,11 @@ export const IPC = {
 export interface DesktopApi {
   importAudio(): Promise<ImportedAudio | null>
   importAudioPath(filePath: string): Promise<ImportedAudio>
+  saveRecording(request: SaveRecordingRequest): Promise<ImportedAudio>
+  requestMicrophoneAccess(): Promise<boolean>
+  getScreenAudioStatus(): Promise<ScreenAudioStatus>
+  openScreenAudioSettings(): Promise<void>
+  copyAppBundlePath(): Promise<string>
   pathForFile(file: File): string
   transcribe(sessionId: string): Promise<TranscriptionResult>
   generateReading(text: string): Promise<ReadingResult>

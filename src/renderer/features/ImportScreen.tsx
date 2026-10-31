@@ -1,16 +1,33 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import type { ImportedAudio, RecordingSource } from '@shared/types'
 import type { UiError } from '../App'
-import { ArrowRightIcon, SparklesIcon, UploadIcon } from '../components/Icons'
+import { ArrowRightIcon, MicrophoneIcon, ScreenIcon, SparklesIcon, UploadIcon } from '../components/Icons'
+import RecordDialog from '../components/RecordDialog'
 
 interface Props {
   onImport: (filePath?: string) => void
+  onRecorded: (audio: ImportedAudio) => void
   error: UiError | null
   onDismissError: () => void
 }
 
-export default function ImportScreen({ onImport, error, onDismissError }: Props): React.JSX.Element {
+export default function ImportScreen({
+  onImport,
+  onRecorded,
+  error,
+  onDismissError
+}: Props): React.JSX.Element {
   const [dragging, setDragging] = useState(false)
+  const [recordingSource, setRecordingSource] = useState<RecordingSource | null>(null)
   const dragDepth = useRef(0)
+
+  const handleRecordingSaved = useCallback(
+    (imported: ImportedAudio) => {
+      setRecordingSource(null)
+      onRecorded(imported)
+    },
+    [onRecorded]
+  )
 
   return (
     <div className="import-screen">
@@ -61,6 +78,27 @@ export default function ImportScreen({ onImport, error, onDismissError }: Props)
         <span className="drop-zone-sub">or click to choose M4A, MP3, WAV, FLAC, OGG, or WebM</span>
       </button>
 
+      <div className="record-options">
+        <button className="record-option" onClick={() => setRecordingSource('microphone')}>
+          <span className="record-option-icon">
+            <MicrophoneIcon width={19} height={19} />
+          </span>
+          <span>
+            <strong>Record microphone</strong>
+            <small>Speak, or play audio near this Mac</small>
+          </span>
+        </button>
+        <button className="record-option" onClick={() => setRecordingSource('system')}>
+          <span className="record-option-icon">
+            <ScreenIcon width={19} height={19} />
+          </span>
+          <span>
+            <strong>Capture screen audio</strong>
+            <small>Record audio from apps, videos, or tabs</small>
+          </span>
+        </button>
+      </div>
+
       {error ? (
         <div className="error-card inline">
           <div>
@@ -95,6 +133,14 @@ export default function ImportScreen({ onImport, error, onDismissError }: Props)
         <ArrowRightIcon width={14} height={14} />
         <span>Cards by AnkiConnect</span>
       </div>
+
+      {recordingSource ? (
+        <RecordDialog
+          source={recordingSource}
+          onClose={() => setRecordingSource(null)}
+          onSaved={handleRecordingSaved}
+        />
+      ) : null}
     </div>
   )
 }

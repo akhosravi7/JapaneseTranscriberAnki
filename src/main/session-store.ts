@@ -2,8 +2,22 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { extname, join, resolve } from 'node:path'
-import { AUDIO_EXTENSIONS, type AudioExtension, type ImportedAudio } from '@shared/types'
+import { AUDIO_EXTENSIONS, type AudioExtension, type ImportedAudio, type RecordingSource } from '@shared/types'
 import { AppError } from '@shared/errors'
+
+const MAX_RECORDING_BYTES = 1024 * 1024 * 1024
+
+const RECORDING_EXTENSIONS: Record<string, AudioExtension> = {
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/aac': 'aac',
+  'audio/flac': 'flac',
+  'audio/opus': 'opus'
+}
 
 interface SessionMeta {
   id: string
@@ -89,6 +103,54 @@ export class SessionStore {
       extension,
       sizeBytes: info.size,
       importedAt: new Date().toISOString()
+    }
+    await writeFile(join(directory, 'session.json'), JSON.stringify(meta, null, 2), 'utf8')
+
+    this.sessions.set(id, { ...meta, audioPath, directory })
+
+    return {
+      sessionId: id,
+      fileName: meta.fileName,
+      mediaUrl: `media://session/${id}`,
+      sizeBytes: meta.sizeBytes,
+      extension: meta.extension,
+      importedAt: meta.importedAt
+    }
+  }
+
+  async importRecording(
+    data: Uint8Array,
+    mimeType: string,
+    source: RecordingSource
+  ): Promise<ImportedAudio> {
+    if (!(data instanceof Uint8Array) || data.byteLength === 0) {
+      throw new AppError('IMPORT_FAILED', 'The recording was empty. Try recording again.')
+    }
+    if (data.byteLength > MAX_RECORDING_BYTES) {
+      throw new AppError('IMPORT_FAILED', 'The recording is too large to import.')
+    }
+
+    const baseMime = mimeType.split(';')[0]?.trim().toLowerCase() ?? ''
+    const extension = RECORDING_EXTENSIONS[baseMime]
+    if (!extension) {
+      throw new AppError('UNSUPPORTED_AUDIO', `The recording format "${mimeType}" is not supported.`)
+    }
+
+    const id = randomUUID()
+    const directory = join(this.root, id)
+    await mkdir(directory, { recursive: true })
+    const audioPath = join(directory, `original.${extension}`)
+    await writeFile(audioPath, Buffer.from(data))
+
+    const importedAt = new Date().toISOString()
+    const stamp = importedAt.replace('T', ' ').replace(/:/g, '-').slice(0, 19)
+    const label = source === 'system' ? 'System audio' : 'Microphone'
+    const meta: SessionMeta = {
+      id,
+      fileName: `${label} ${stamp}.${extension}`,
+      extension,
+      sizeBytes: data.byteLength,
+      importedAt
     }
     await writeFile(join(directory, 'session.json'), JSON.stringify(meta, null, 2), 'utf8')
 

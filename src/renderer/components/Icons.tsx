@@ -130,6 +130,36 @@ export function MusicIcon(props: IconProps) {
   )
 }
 
+export function MicrophoneIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <path d="M12 17v5" />
+      <path d="M8 22h8" />
+    </svg>
+  )
+}
+
+export function ScreenIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+      <path d="M8 11h2l1.5-2.5L13 13l1.5-2H17" />
+    </svg>
+  )
+}
+
+export function StopIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} fill="currentColor" stroke="none">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  )
+}
+
 export function CloseIcon(props: IconProps) {
   return (
     <svg {...base(props)}>
